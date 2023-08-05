@@ -3,7 +3,7 @@
 
  ## What is this script about? 
  Hey, this is an old and early stage script that I use for auto reloading web pages in a browser thanks to selenium. It's basically follows changes happened in the directory and redirects the page if any change happened at the file. It has basic built in commands to ignore files or paths. (I might add ignoring file types too. It's not hard but never needed it.) Also some fancy features. This script was all about reloading and nothing else, I upgraded it a little bit. Added new commands and capabilities.
- #### What is this capabilitie? 
+ #### What is this capabilities? 
  It has ability to add and change commands on fly! You can add, delete or modify commands while the script is running. Just edit commandhandler.py.
 
  ## Why I'm publishing it?
