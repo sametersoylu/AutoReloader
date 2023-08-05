@@ -12,7 +12,8 @@ Well, mostly I hope it's going to help others. I mean frameworks like Laravel or
  ## How this works? 
 It's quite simple. Run the executer.py file. There's some CLI args for the executer.py. Use "-h" to print help and get CLI args. Also it has built in commands. Use "help" to print help and get command list.
 
-# **NOTE**: This requries a running web server. Like apache, Live Server, laravel artisan, etc. I might add a server feature but it's not there yet so you need to use a server for loading your pages. I use it with XAMPP's apache setup. Quite easy to install and works fine.  
+# **NOTE**
+This requries a running web server. Like apache, Live Server, laravel artisan, etc. I might add a server feature but it's not there yet so you need to use a server for loading your pages. I use it with XAMPP's apache setup. Quite easy to install and works fine.  
 
  ### Wdym by buggy in Windows?
 Initially I wrote this in Linux. And I cleaned and optimized the code for Linux use only. Since I decided to publish this I tried to run on Windows and it was meh. Did a little bit tinkering and it works *just fine*. But it hurt code's readability. Didn't refine it yet. It's just too much work. I might refine and publish another update later, in my spare time.
