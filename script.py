@@ -155,19 +155,3 @@ class AutoReload:
     
     def run():
         return
-
-
-        
-
-if __name__ == "__main__":
-    su = False
-    if os.geteuid() == 0: 
-        print(f"{bcolors.FAIL}THIS SCRIPT SHOULD NOT RUN AS SUDO (SUPER USER/ROOT). SCRIPT DOESN'T REQUIRE ANY ROOT PRIVILEGE! PRESS ANY KEY TO EXIT OR IF YOU KNOW WHAT YOU ARE DOING TYPE \"iamcautious\"!")
-        inp = input("")
-        if inp != "iamcautious":
-            exit()
-        su = True
-        
-    obj = AutoReload(root="http://127.0.0.1:80/Test",handle_arg=True, su=su)
-    obj.runCLI()
-    
