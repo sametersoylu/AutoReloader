@@ -7,7 +7,6 @@ else:
     import readline
 from time import sleep
 import asyncio
-from os import system, name
 from selenium import webdriver
 from selenium.common.exceptions import WebDriverException, NoSuchWindowException
 from selenium.webdriver.chrome.options import Options
@@ -15,9 +14,8 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 import sys
 import os.path
-
 import threading
-import multiprocessing as mp 
+
 
 class bcolors:
     HEADER = '\033[95m'
@@ -48,7 +46,6 @@ class AutoReload:
         self._root = "http://127.0.0.1:80/Test/"
     def default_spage(self):
         self._start_page = "./login.php"
-
     def __init__(self, root:str = "", start_page: str = "", print: bool = False, handle_arg: bool = False, su: bool = False, new = True):
         if not new: 
             return
@@ -57,7 +54,7 @@ class AutoReload:
         self.print = print
         self.file_name = sys.argv[0]
         self.print = False
-        self.ignore = False;
+        self.ignore = False
         self.ignoreArr = []
 
         self.opt = webdriver.ChromeOptions()
@@ -155,19 +152,3 @@ class AutoReload:
     
     def run():
         return
-
-
-        
-
-if __name__ == "__main__":
-    su = False
-    if os.geteuid() == 0: 
-        print(f"{bcolors.FAIL}THIS SCRIPT SHOULD NOT RUN AS SUDO (SUPER USER/ROOT). SCRIPT DOESN'T REQUIRE ANY ROOT PRIVILEGE! PRESS ANY KEY TO EXIT OR IF YOU KNOW WHAT YOU ARE DOING TYPE \"iamcautious\"!")
-        inp = input("")
-        if inp != "iamcautious":
-            exit()
-        su = True
-        
-    obj = AutoReload(root="http://127.0.0.1:80/Test",handle_arg=True, su=su)
-    obj.runCLI()
-    

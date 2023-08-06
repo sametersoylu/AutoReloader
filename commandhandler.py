@@ -9,7 +9,8 @@ from selenium import webdriver
 import getopt
 import sys
 import tldextract
-
+import argparse
+import phpserver
 def fignore(self: AutoReload, string): 
     exists = False
     res = string.split(" ")
@@ -32,40 +33,71 @@ def fignore(self: AutoReload, string):
         self.ignoreArr.append(file)
         print(f"{msgHeaders.INFO} Ignoring {type} \"{file}\".")
 
-def handleArg(self):
-        options = "hr:s:li:"
-        long_options = ["help", "root=", "start_page=", "log", "ignore-html", "ignore="]
-        try: 
-            arguments, values = getopt.getopt(sys.argv[1:], options, long_options)
-            for currentArg, currentVal in arguments:
-                if currentArg in ("-h", "--help"):
-                    try: 
-                        self.close()
-                    except: 
-                        pass
-                    print(self.helpfunc())
-                    exit()
-                    
-                elif currentArg in ("-r", "--root"):
-                    if "http://" in currentVal or "https://" in currentVal:
-                        self._root = currentVal
-                        if self._root[-1] != '/':
-                            self._root += '/'
-                        continue
-                    print(f"{msgHeaders.WARNING} Please enter a valid URL for root!\n{msgHeaders.INFO} Returning to default!")
-                elif currentArg in ("-s", "--start_page"):
-                    self._start_page = currentVal
-                elif currentArg in ("-l", "--log"):
-                    self.print = True
-                elif currentArg in ("-i", "--ignore"):
-                    fignore(self, currentVal)
-                elif currentArg in ("--ignore-html"):
-                    self.ignore = True
-                
-        except getopt.error as err:
-            print( bcolors.FAIL + str(err))
+
+def handleArgs(self: AutoReload):
+    parser = argparse.ArgumentParser(description="Auto Reloader")
+    parser.add_argument("--Server", action="store_true", help="Sets a PHP Sever. Default is localhost:80/")
+    
+    reloader_group = parser.add_argument_group("Reloader Starting Arguments")
+    reloader_group.add_argument("-r", "--root", help="sets the url (this argument can't be used while Server is set)")
+    reloader_group.add_argument("-s", "--start_page", help="sets the start page")
+
+    reloader_util_group = parser.add_argument_group("Reloader Utility Arguments")
+    reloader_util_group.add_argument("-i", "--ignore", help="ignores provided files or paths. instead reloads the current page")
+    reloader_util_group.add_argument("--ignore_html",action="store_true", help="ignores changes happened in html files. instead reloads the current page.")
+    reloader_util_group.add_argument("-l", "--log", action="store_true", help="prints log to stdout")
+
+    server_group = parser.add_argument_group("PHP Server Arguments")
+    server_group.add_argument("-a", "--address", help="sets server address")
+    server_group.add_argument("-p", "--port", help="sets server port")
+    server_group.add_argument("-P", "--php_path", help="sets php executable path")
+    server_group.add_argument("-t", "--target", help="sets php server target directory")
+
+    args = parser.parse_args()
 
 
+    if not args.Server:
+        if args.address or args.target:
+            parser.error("--allow flag is required to use restricted arguments")
+        if args.root: 
+            self._root = args.root
+        if args.ignore_html: 
+            self.ignore = True
+        if args.log: 
+            self.print = True
+        if args.ignore: 
+            fignore(self, args.ignore)
+        
+    else:
+        address, target, php_path, port = "", "", "", ""
+        if args.root: 
+            parser.error("This argument can not be used while Server is set!")
+        if args.address:
+            address = args.address
+            self._root = args.address
+        if args.target: 
+            target = args.target
+        if args.php_path: 
+            php_path = args.php_path
+        if args.port: 
+            port = args.port
+
+        self._Server = phpserver.Server()
+        self._Server.startServer(_root=target, ip_addr=address, port=port, php_path=php_path)
+        
+        
+
+    if args.root:
+        if not "http://" in args.root or not "https://" in args.root:
+            parser.error("Please enter a valid URL! ie: https://localhost:80")
+        self._root = args.root
+    if args.start_page: 
+        self._start_page = args.start_page
+    if args.log: 
+        self.print = True
+    
+    
+    
 def get_logs(log_path = "", row_count = 1000, hint = "", live = False):
     if os.name == "nt": 
         if log_path == "":
@@ -92,8 +124,6 @@ def helpcommand():
     print("clear ignore : Clears ignore list that's been specified by the user")
 
 
-
-
 def driverStart(self: AutoReload): 
     self.driver = webdriver.Chrome(options=self.opt)
     driverT = threading.Thread(target=self.driver.get, args=(self._root + self._start_page, ))
@@ -101,6 +131,39 @@ def driverStart(self: AutoReload):
     self.checkT = threading.Thread(target=self.continuousCheck)
     self.checkT.start()
 
+def server(self: AutoReload, command: str):
+    if command == "status": 
+        if not hasattr(self, "_Server") or not self._Server.elevator.is_alive():
+            print(f"{msgHeaders.INFO} Sever is dead!")
+            return 0
+        print(f"{msgHeaders.INFO} Server alive!")
+        return 0
+    if command == "start": 
+        if hasattr(self, "_Server") and self._Server.elevator.is_alive():
+            print(f"{msgHeaders.WARNING} A server is already running!")
+            print(f"{msgHeaders.FAIL} Can't open server!")
+            return 0
+        if not hasattr(self, "_Server"): 
+            self._Server = phpserver.Server()
+        self._Server.startServer()
+        return 0
+    if command == "stop": 
+        if not hasattr(self, "_Server") or not self._Server.elevator.is_alive(): 
+            print(f"{msgHeaders.FAIL} Server already closed!")
+            return 0
+        self._Server.stopServer()
+        return 0
+    if command == "log":
+        if hasattr(self, "_Server") and self._Server.elevator.is_alive():
+            if not hasattr(self, "ServerLog"): 
+                self.ServerLog = True
+            self._Server.setLogDestination(os.stdout) if self.ServerLog else self._Server.setLogDestination(os.devnull)
+            self.ServerLog = not self.ServerLog
+        return 0
+    return 1
+            
+
+        
 def driver(self: AutoReload, command: str): 
     if command == "close":
         if not self.isBrowserAlive():
@@ -130,6 +193,13 @@ def driver(self: AutoReload, command: str):
 
 @staticmethod
 def commandHandler(self: AutoReload, command: str):
+    if "server" in command: 
+        command = command.lstrip().removeprefix("server ").rstrip()
+        if not server(self, command):
+            return
+        print(f"{msgHeaders.FAIL} Invalid usage of command!")
+        print(f"{msgHeaders.INFO} Usage: \"server <keyword>\"\n       Keywords: stop, start, log and status")
+        return
     if "get" in command: 
         command = command.lstrip().removeprefix("get ").rstrip()
         if not "http" in command: 
@@ -206,6 +276,8 @@ def commandHandler(self: AutoReload, command: str):
         if self.isBrowserAlive():
             self.driver.close()
         self.checkT.join()
+        if hasattr(self, "_Server"): 
+            self._Server.stopServer()
         self.close()
 
     if command == "ignore html" or command == "i-html":
