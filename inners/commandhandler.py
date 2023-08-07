@@ -1,5 +1,5 @@
-from classes import *
-from script import AutoReload
+from inners.classes import *
+from inners.script import AutoReload
 from time import sleep
 from os import system
 import os
@@ -8,7 +8,8 @@ import threading
 from selenium import webdriver
 import tldextract
 import argparse
-import phpserver
+import inners.phpserver as phpserver
+import sys
 def fignore(self: AutoReload, string): 
     exists = False
     res = string.split(" ")
@@ -131,36 +132,50 @@ def driverStart(self: AutoReload):
     self.checkT.start()
 
 def server(self: AutoReload, command: str):
-    if command == "status": 
+    if command[0] == "status": 
         if not hasattr(self, "_Server") or not self._Server.isAlive():
-            print(f"{msgHeaders.INFO} Sever is dead!")
+            print(f"{msgHeaders.INFO} Server is dead!")
             return 0
         print(f"{msgHeaders.INFO} Server alive!")
         return 0
-    if command == "start": 
+    if command[0] == "start":
+        for i,arg in enumerate(command): 
+            if (i+1) < len(command) and (arg == "-t" or arg == "-target"):
+                target = command[i + 1]
+                continue
+            if (i+1) < len(command) and (arg == "-a" or arg == "-address"):
+                address = command[i + 1]
+                continue
+            if (i+1) < len(command) and (arg == "-p" or arg == "-port"):
+                port = command[i + 1]
+                continue
+            if (i+1) < len(command) and (arg == "-P" or arg == "-php_address"):
+                php_path = command[i + 1]
+                continue
         if hasattr(self, "_Server") and self._Server.isAlive():
             print(f"{msgHeaders.WARNING} A server is already running!")
             print(f"{msgHeaders.FAIL} Can't open server!")
             return 0
         if not hasattr(self, "_Server"): 
             self._Server = phpserver.Server()
-        self._Server.startServer()
-        self._Server.checkET = Thread(target=self._Server.serverCheck)
-        self._Server.checkET.start()
+        self._Server.startServer(_root= target if "target" in locals() else "",
+                                 ip_addr= address if "address" in locals() else "",
+                                 port= port if "port" in locals() else "",
+                                 php_path= php_path if "php_path" in locals() else "")
         print(f"{msgHeaders.INFO} Server started!")
         return 0
-    if command == "stop": 
+    if command[0] == "stop": 
         if not hasattr(self, "_Server") or not self._Server.isAlive(): 
             print(f"{msgHeaders.FAIL} Server already closed!")
             return 0
         self._Server.stopServer()
-        self._Server.checkET.join()
         return 0
-    if command == "log":
+    if command[0] == "log":
         if hasattr(self, "_Server") and self._Server.isAlive():
             if not hasattr(self, "ServerLog"): 
                 self.ServerLog = True
-            self._Server.setLogDestination(os.stdout) if self.ServerLog else self._Server.setLogDestination(os.devnull)
+            print(f"{msgHeaders.INFO} Server logging " + ("enabled!" if self.ServerLog else "disabled!"))
+            self._Server.setLogDestination(sys.stdout) if self.ServerLog else self._Server.setLogDestination(open(os.devnull, "w"))
             self.ServerLog = not self.ServerLog
         return 0
     return 1
@@ -220,7 +235,7 @@ def log(self: AutoReload, res):
 def commandHandler(self: AutoReload, command: str):
     if command.startswith("server"):
         if len(command) == len("server") or command[len("server")] == " ":
-            command = command.lstrip().removeprefix("server ").rstrip()
+            command = command.lstrip().removeprefix("server ").rstrip().split()
             if not server(self, command):
                 return
             print(f"{msgHeaders.FAIL} Invalid usage of command!")
@@ -292,7 +307,6 @@ def commandHandler(self: AutoReload, command: str):
         
         if hasattr(self, "_Server"): 
             self._Server.stopServer()
-            self._Server.checkET.join()
         self.close()
 
     if command == "ignore html" or command == "i-html":

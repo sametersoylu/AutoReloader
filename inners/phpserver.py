@@ -1,6 +1,8 @@
 import subprocess, os, pexpect
 from time import sleep
 from classes import *
+import sys
+import threading
 if os.name == "nt": 
     import multiprocess as mp
 else: 
@@ -21,14 +23,18 @@ class Server:
             return self.elevator.is_alive()
 
     def elevatedProc(self, cmd, passw):
-        self.serverProc = pexpect.spawn(cmd, encoding='utf8', timeout=None)
+        p = pexpect.spawn("php -m", encoding='utf8', env=os.environ.copy())
+        print("test")
+        p.expect(pexpect.EOF)
+        print(p.before)
+        self.serverProc = pexpect.spawn(cmd, encoding='utf8', timeout=None, env=os.environ.copy())
         try: 
             self.serverProc.expect("sudo", 1)
             self.serverProc.sendline(passw)
         except: 
             pass
         self.serverProc.expect(pexpect.EOF)
-        print("Test")
+        print(f"\n{msgHeaders.WARNING} Server stopped!")
 
     def setLogDestination(self,stream): 
         self.serverProc.logfile = stream
@@ -52,7 +58,7 @@ class Server:
         try: 
             cmd = f"sudo {php_path} -S {args[2]}:{args[3]}" + (" -t " if not _root == "" else "") + (f"{_root}" if not _root == "" else "")
             passw = input("[sudo] password: ")
-            self.elevator = mp.Process(target=self.elevatedProc, args=(cmd, passw))
+            self.elevator = Thread(target=self.elevatedProc, args=(cmd, passw))
             self.elevator.start()
         except Exception as e: 
             print(e)
@@ -60,7 +66,7 @@ class Server:
         return
     
     def stopServer(self): 
-        self.elevator.terminate()
+        self.serverProc.terminate()
     
     def getError(self): 
         return
@@ -69,6 +75,7 @@ class Server:
 if __name__ == "__main__":
     server = Server()
     server.startServer()
+    sleep(5)
     server.stopServer()
 
 

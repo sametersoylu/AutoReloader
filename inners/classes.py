@@ -24,7 +24,8 @@ import threading
 class Thread(threading.Thread): 
     def __init__(self, target, args=()):
         super().__init__(target=target, args=args)
-    def run(self): 
+        
+    def run(self):
         try:
             if self._target:
                 self._target(*self._args, **self._kwargs)

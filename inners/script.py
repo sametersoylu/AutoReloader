@@ -14,7 +14,7 @@ from watchdog.events import FileSystemEventHandler
 import sys
 import os.path
 import threading
-from classes import *
+from inners.classes import *
 
 
 class AutoReload: 
