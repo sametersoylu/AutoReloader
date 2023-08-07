@@ -6,29 +6,10 @@ else:
     import multiprocessing as mp 
     import readline
 from six import PY3 
-from time import sleep
-import asyncio
-from os import system, name
-from selenium import webdriver
 from selenium.common.exceptions import WebDriverException, NoSuchWindowException
-from selenium.webdriver.chrome.options import Options
-from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler
 import sys
 import os.path
-import getopt
-import threading
-import argparse
-
-class Thread(threading.Thread): 
-    def __init__(self, target, args=()):
-        super().__init__(target=target, args=args)
-    def run(self): 
-        try:
-            if self._target:
-                self._target(*self._args, **self._kwargs)
-        except Exception as e:
-            pass
+from classes import Thread
 
 if PY3: 
     from importlib import import_module, reload 
@@ -46,8 +27,11 @@ if __name__ == '__main__':
             reloader.observer.start()
             driverT = Thread(target=reloader.driver.get, args=(reloader._root + reloader._start_page,))
             driverT.start()
-            reloader.checkT = Thread(target=reloader.continuousCheck)
+            reloader.checkT = Thread(target=reloader.browserCheck)
             reloader.checkT.start()
+            if hasattr(reloader, "_Server"): 
+                reloader._Server.checkET = Thread(target= reloader._Server.serverCheck)
+                reloader._Server.checkET.start()
             while True: 
                 print(f"\n{script.msgHeaders.RELOADER} {script.bcolors.OKCYAN}Enter the file name to switch pages (or enter {script.bcolors.FAIL}{script.bcolors.BOLD}exit{script.bcolors.ENDC}{script.bcolors.OKCYAN} for closing script){script.bcolors.ENDC}")
                 commandinp = input(f"{script.msgHeaders.INPUT} ")
@@ -68,8 +52,8 @@ if __name__ == '__main__':
              sys.stderr = script.DevNull()
              reloader.close(f"{script.bcolors.WARNING}Driver already closed! Nothing to do! Exiting!")
              exit()
-    except: 
-        print("other except")
+    except Exception as e: 
+        print(f"Unhandled Exception occured: {e}")
 
 
     

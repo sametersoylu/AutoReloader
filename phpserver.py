@@ -1,17 +1,24 @@
-import subprocess
-import os
-import sys
-import select 
-import fcntl
-import pexpect
+import subprocess, os, pexpect
+from time import sleep
+from classes import *
 if os.name == "nt": 
     import multiprocess as mp
 else: 
     import multiprocessing as mp
 
 class Server:
-    def isAlive(self): 
-        return self.serverProc.isalive()
+    def serverCheck(self, alive = True): 
+        while alive: 
+            if not self.isAlive(): 
+                print(f"\n{msgHeaders.WARNING} Server stopped!")
+                alive = False
+            sleep(1)
+
+    def isAlive(self):
+        try: 
+            return self.serverProc.isalive()
+        except: 
+            return self.elevator.is_alive()
 
     def elevatedProc(self, cmd, passw):
         self.serverProc = pexpect.spawn(cmd, encoding='utf8', timeout=None)
@@ -21,6 +28,7 @@ class Server:
         except: 
             pass
         self.serverProc.expect(pexpect.EOF)
+        print("Test")
 
     def setLogDestination(self,stream): 
         self.serverProc.logfile = stream

@@ -1,13 +1,11 @@
-from script import bcolors, msgHeaders, AutoReload; 
+from classes import *
+from script import AutoReload
 from time import sleep
 from os import system
 import os
 import os.path
-import multiprocessing as mp
 import threading
 from selenium import webdriver
-import getopt
-import sys
 import tldextract
 import argparse
 import phpserver
@@ -86,6 +84,7 @@ def handleArgs(self: AutoReload):
         self._Server.startServer(_root=target, ip_addr=address, port=port, php_path=php_path)
         
         
+        
 
     if args.root:
         if not "http://" in args.root or not "https://" in args.root:
@@ -133,28 +132,32 @@ def driverStart(self: AutoReload):
 
 def server(self: AutoReload, command: str):
     if command == "status": 
-        if not hasattr(self, "_Server") or not self._Server.elevator.is_alive():
+        if not hasattr(self, "_Server") or not self._Server.isAlive():
             print(f"{msgHeaders.INFO} Sever is dead!")
             return 0
         print(f"{msgHeaders.INFO} Server alive!")
         return 0
     if command == "start": 
-        if hasattr(self, "_Server") and self._Server.elevator.is_alive():
+        if hasattr(self, "_Server") and self._Server.isAlive():
             print(f"{msgHeaders.WARNING} A server is already running!")
             print(f"{msgHeaders.FAIL} Can't open server!")
             return 0
         if not hasattr(self, "_Server"): 
             self._Server = phpserver.Server()
         self._Server.startServer()
+        self._Server.checkET = Thread(target=self._Server.serverCheck)
+        self._Server.checkET.start()
+        print(f"{msgHeaders.INFO} Server started!")
         return 0
     if command == "stop": 
-        if not hasattr(self, "_Server") or not self._Server.elevator.is_alive(): 
+        if not hasattr(self, "_Server") or not self._Server.isAlive(): 
             print(f"{msgHeaders.FAIL} Server already closed!")
             return 0
         self._Server.stopServer()
+        self._Server.checkET.join()
         return 0
     if command == "log":
-        if hasattr(self, "_Server") and self._Server.elevator.is_alive():
+        if hasattr(self, "_Server") and self._Server.isAlive():
             if not hasattr(self, "ServerLog"): 
                 self.ServerLog = True
             self._Server.setLogDestination(os.stdout) if self.ServerLog else self._Server.setLogDestination(os.devnull)
@@ -191,39 +194,67 @@ def driver(self: AutoReload, command: str):
         return 0
     return 1
 
+def log(self: AutoReload, res): 
+    i = 0
+    rowcount = "1000"
+    hint = ""
+    live = False 
+    path = ""
+    for arg in res:
+        if(arg == "-n"):
+            if((i + 1) < len(res) and not "-" in res[i + 1]):
+                rowcount = res[i + 1]
+        if(arg == "-h"):
+            if((i + 1) < len(res) and not "-" in res[i + 1]):
+                hint = res[i + 1]
+        if(arg == "-l"): 
+            live = True
+        if(arg == "-p"):
+            if((i + 1) < len(res) and not "-" in res[i + 1]):
+                path = res[i + 1]
+        i += 1
+    get_logs(row_count=int(rowcount), hint=hint, live=live, log_path=path)
+    return 0
+
 @staticmethod
 def commandHandler(self: AutoReload, command: str):
-    if "server" in command: 
-        command = command.lstrip().removeprefix("server ").rstrip()
-        if not server(self, command):
+    if command.startswith("server"):
+        if len(command) == len("server") or command[len("server")] == " ":
+            command = command.lstrip().removeprefix("server ").rstrip()
+            if not server(self, command):
+                return
+            print(f"{msgHeaders.FAIL} Invalid usage of command!")
+            print(f"{msgHeaders.INFO} Usage: \"server <keyword>\"\n       Keywords: stop, start, log and status")
             return
-        print(f"{msgHeaders.FAIL} Invalid usage of command!")
-        print(f"{msgHeaders.INFO} Usage: \"server <keyword>\"\n       Keywords: stop, start, log and status")
-        return
-    if "get" in command: 
-        command = command.lstrip().removeprefix("get ").rstrip()
-        if not "http" in command: 
-            command = "http://" + command
-        self.driver.get(command)
-        self._root = command
-        return 
-    if "page" in command: 
-        command = command.lstrip().removeprefix("page ").rstrip()
-        if command[0] != '/':
-            command = "/" + command
-        if tldextract.extract(command).suffix != "": 
-            print(f"{msgHeaders.FAIL} Please use get command to open a web site! Page command works for pages for the provided root! {tldextract.extract(command)} ")
-            return
-        self.driver.get(self._root + command)
-        return
     
-    if "driver" in command:
-        command = command.lstrip().removeprefix("driver ").rstrip()
-        if not driver(self, command): 
+    if command.startswith("get"):
+        if not len(command) == len("get") or command[len("get")] == " ":
+            command = command.lstrip().removeprefix("get ").rstrip()
+            if not "http" in command: 
+                command = "http://" + command
+            self.driver.get(command)
+            self._root = command
+            return 
+    
+    if command.startswith("page"):
+        if len(command) == len("page") or command[len("page")] == " ":
+            command = command.lstrip().removeprefix("page ").rstrip()
+            if command[0] != '/':
+                command = "/" + command
+            if tldextract.extract(command).suffix != "": 
+                print(f"{msgHeaders.FAIL} Please use get command to open a web site! Page command works for pages for the provided root! {tldextract.extract(command)} ")
+                return
+            self.driver.get(self._root + command)
             return
-        print(f"{msgHeaders.FAIL} Invalid usage of command!")
-        print(f"{msgHeaders.INFO} Usage: \"driver <keyword>\"\n       Keywords: close, start, restart and status")
-        return
+    
+    if command.startswith("driver"):
+        if not len(command) > len("driver") or command[len("driver")] == " ":
+            command = command.lstrip().removeprefix("driver ").rstrip()
+            if not driver(self, command): 
+                return
+            print(f"{msgHeaders.FAIL} Invalid usage of command!")
+            print(f"{msgHeaders.INFO} Usage: \"driver <keyword>\"\n       Keywords: close, start, restart and status")
+            return
 
     if "clearfetch" == command:
         if os.name == "nt": 
@@ -234,33 +265,15 @@ def commandHandler(self: AutoReload, command: str):
         system("clear && neofetch && echo AutoReloader")
         return
 
-    if "log" in command:
-        res = command.removeprefix("log ").split()
-        i = 0
-        rowcount = "1000"
-        hint = ""
-        live = False 
-        path = ""
-        for arg in res:
-            if(arg == "-n"):
-                if((i + 1) < len(res) and not "-" in res[i + 1]):
-                    rowcount = res[i + 1]
-            if(arg == "-h"):
-                if((i + 1) < len(res) and not "-" in res[i + 1]):
-                    hint = res[i + 1]
-            if(arg == "-l"): 
-                live = True
-            if(arg == "-p"):
-                if((i + 1) < len(res) and not "-" in res[i + 1]):
-                    path = res[i + 1]
-            i += 1
-
-        get_logs(row_count=int(rowcount), hint=hint, live=live, log_path=path)
-        return
-    if "sys(" in command and command[len(command) - 1]:
+    if command.startswith("log"):
+        if len(command) == len("log") or command[len("log")] == " ": 
+            res = command.removeprefix("log ").split()
+            log(self, res) 
+            return
+    
+    if command.startswith("sys(") and command.endswith(")"):
         system(f"{command.removeprefix('sys(').removesuffix(')')}")
         return 
-    
     if command == "cls":
         if os.name == "nt": 
             system("cls")
@@ -276,8 +289,10 @@ def commandHandler(self: AutoReload, command: str):
         if self.isBrowserAlive():
             self.driver.close()
         self.checkT.join()
+        
         if hasattr(self, "_Server"): 
             self._Server.stopServer()
+            self._Server.checkET.join()
         self.close()
 
     if command == "ignore html" or command == "i-html":
@@ -289,17 +304,17 @@ def commandHandler(self: AutoReload, command: str):
         self.ignoreArr.clear()
         print(f"{msgHeaders.WARNING}{msgHeaders.INFO} Ignore list cleared.\n")
         return
-    
-    if "ignore" in command:
-        fignore(self,command.removeprefix("ignore "))
-        return
-    if "clear cache" in command: 
+    if command.startswith("ignore"):
+        if len(command) == len("ignore") or command[len("ignore")] == " ":
+            fignore(self,command.removeprefix("ignore "))
+            return
+    if "clear cache" == command: 
         self.driver.execute_script("location.reload(true);")
         return
     if command != "":
         clear = command.split("?")
         if not os.path.isfile(clear[0]): 
-            print(f"{msgHeaders.FAIL} File or command \"{command}\" does not exists!")
+            print(f"{msgHeaders.FAIL} File \"{command}\" does not exists in this directory! Also no command found with this alias! If you meant a page that isn't in directory, try \"page <target>\"")
             return
         self.driver.get(self._root + command)
         self.lastEVENT = command

@@ -6,7 +6,6 @@ if os.name == "nt":
 else: 
     import readline
 from time import sleep
-import asyncio
 from selenium import webdriver
 from selenium.common.exceptions import WebDriverException, NoSuchWindowException
 from selenium.webdriver.chrome.options import Options
@@ -15,37 +14,16 @@ from watchdog.events import FileSystemEventHandler
 import sys
 import os.path
 import threading
+from classes import *
 
-
-class bcolors:
-    HEADER = '\033[95m'
-    OKBLUE = '\033[94m'
-    OKCYAN = '\033[96m'
-    OKGREEN = '\033[92m'
-    WARNING = '\033[93m'
-    FAIL = '\033[91m'
-    ENDC = '\033[0m'
-    BOLD = '\033[1m'
-    UNDERLINE = '\033[4m'
-
-class msgHeaders: 
-    WARNING = f"[{bcolors.WARNING}{bcolors.BOLD}WARNING{bcolors.ENDC}]"
-    INFO = f"[{bcolors.OKBLUE}{bcolors.BOLD}INFO{bcolors.ENDC}]"
-    FAIL = f"[{bcolors.FAIL}{bcolors.BOLD}FAIL{bcolors.ENDC}]"
-    RELOADER = f"[{bcolors.BOLD}{bcolors.OKBLUE}RELOADER{bcolors.ENDC}]"
-    INPUT = f"[{bcolors.OKGREEN}{bcolors.BOLD}INPUT{bcolors.ENDC}]"
-
-class DevNull:
-    def write(self, msg):
-        pass
 
 class AutoReload: 
-    def test(): 
-        return "TEST WORKS!"
     def default_root(self):
         self._root = "http://127.0.0.1:80/Test/"
+
     def default_spage(self):
         self._start_page = "./login.php"
+
     def __init__(self, root:str = "", start_page: str = "", print: bool = False, handle_arg: bool = False, su: bool = False, new = True):
         if not new: 
             return
@@ -64,6 +42,7 @@ class AutoReload:
         
         if os.name == "nt": 
             self.opt.add_experimental_option("excludeSwitches", ["enable-logging"])
+
         self.driver = webdriver.Chrome(options=self.opt)
         self.observer = Observer()
         if self._root == "":
@@ -71,19 +50,6 @@ class AutoReload:
         if self._start_page == "":
             self.default_spage()
         self.lastEVENT = self._start_page
-        
-            
-    def helpfunc(self):
-        str = "Default arguments for this script is:\n"
-        str += f"root: {self._root} \n"
-        str += f"start_page: {self._start_page} \n\n"
-        str += f"Usage: '{self.file_name} -r <root_address> -s <start_page>'\n"
-        str += "-r/--root: sets the url \n-s/--start_page: sets the start page\n"
-        str += "-l/--log: prints the file name if a file is changed\n"
-        str += "-h/--help: prints this help message\n"
-        str += "--ignore-html: won't load html files if they are changed, instead will reload the current page"
-        str += "-i/--ignore \"<file(s)/path(s)>\" : won't load ignored files if they are changed, instead will reload the current page"
-        return str
 
     class Handler(FileSystemEventHandler):
         def __init__(self, outer_instance):
@@ -118,37 +84,9 @@ class AutoReload:
         except:
             return False
 
-    def continuousCheck(self, alive = True):
+    def browserCheck(self, alive = True):
         while alive: 
             if not self.isBrowserAlive(): 
                 print(f"\n{msgHeaders.WARNING} Driver closed!")
                 alive = False
             sleep(1)
-        
-        
-    def runCLI(self):
-         if self._root[-1] != '/':
-            self._root += '/'
-         self.observer.schedule(self.Handler(self), ".", recursive=True)
-         try: 
-            self.observer.start()
-            driverT = threading.Thread(target=self.driver.get, args=(self._root + self._start_page,))
-            driverT.start()
-            self.checkT = threading.Thread(target=self.continuousCheck)
-            self.checkT.start()
-            while True: 
-                print(f"\n{msgHeaders.RELOADER} {bcolors.OKCYAN}Enter the file name to switch pages (or enter {bcolors.FAIL}{bcolors.BOLD}exit{bcolors.ENDC}{bcolors.OKCYAN} for closing script){bcolors.ENDC}")
-                commandinp = input(f"{msgHeaders.INPUT} ")
-                commands = commandinp.split(' & ')
-                for command in commands:
-                    self.commandHandler(command.rstrip())
-         except KeyboardInterrupt:
-             self.checkT.close()
-             exit()
-         except WebDriverException or NoSuchWindowException: 
-             sys.stderr = DevNull()
-             self.close(f"{bcolors.WARNING}Driver already closed! Nothing to do! Exiting!")
-             exit()
-    
-    def run():
-        return
