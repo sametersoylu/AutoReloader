@@ -1,6 +1,6 @@
 import subprocess, os, pexpect
 from time import sleep
-from classes import *
+from inners.classes import *
 import sys
 import threading
 if os.name == "nt": 
@@ -23,10 +23,6 @@ class Server:
             return self.elevator.is_alive()
 
     def elevatedProc(self, cmd, passw):
-        p = pexpect.spawn("php -m", encoding='utf8', env=os.environ.copy())
-        print("test")
-        p.expect(pexpect.EOF)
-        print(p.before)
         self.serverProc = pexpect.spawn(cmd, encoding='utf8', timeout=None, env=os.environ.copy())
         try: 
             self.serverProc.expect("sudo", 1)
@@ -34,7 +30,6 @@ class Server:
         except: 
             pass
         self.serverProc.expect(pexpect.EOF)
-        print(f"\n{msgHeaders.WARNING} Server stopped!")
 
     def setLogDestination(self,stream): 
         self.serverProc.logfile = stream
@@ -45,7 +40,7 @@ class Server:
                 php_path = "C:\\xampp\\php\\php.exe"  
         else: 
             if php_path == "":
-                php_path = "php"
+                php_path = "./inners/phpFiles/php -c ./inners/phpFiles/php.ini"
         args = [_root, php_path, ip_addr, port]
         defaults = ["", "", "127.0.0.1", "80"]
 
